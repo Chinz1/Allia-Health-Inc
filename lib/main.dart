@@ -1,4 +1,5 @@
 import 'package:allia_health_inc_test_app/auth/auth_bloc/auth_bloc.dart';
+import 'package:allia_health_inc_test_app/auth/auth_bloc/auth_event.dart';
 import 'package:allia_health_inc_test_app/auth/auth_bloc/auth_state.dart';
 import 'package:allia_health_inc_test_app/auth/domain_layer/login_usecase.dart';
 import 'package:allia_health_inc_test_app/auth/repository/auth_repository.dart';
@@ -17,8 +18,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  debugPaintBaselinesEnabled = false;
+  // Set up dependencies
+  final authRepository = AuthRepository();
+  final loginUseCase = LoginUseCase(authRepository);
+  final authBloc = AuthBloc(loginUseCase);
 
+  // Set up middleware observer
+  Bloc.observer = AuthMiddleware(authBloc);
 
   // Setup the system UI overlay and orientation
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
@@ -27,39 +33,40 @@ void main() {
     SystemUiOverlay.bottom,
   ]);
 
-  runApp(MyApp());
+  runApp(MyApp(authBloc: authBloc, loginUseCase: loginUseCase));
 }
 
 class MyApp extends StatelessWidget {
+  final AuthBloc authBloc;
+  final LoginUseCase loginUseCase;
+
+  MyApp({required this.authBloc, required this.loginUseCase});
+
   @override
   Widget build(BuildContext context) {
-    // Set up dependencies
-    final authRepository = AuthRepository();
-    final loginUseCase = LoginUseCase(authRepository);
-
     // Initialize the QuestionService and QuestionRepository
-    final questionService =
-        QuestionService(); // No need to pass the base URL now
+    final questionService = QuestionService();
     final questionRepository = QuestionRepositoryImpl(questionService);
     final getQuestionsUseCase = GetQuestionsUseCase(questionRepository);
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => AuthBloc(loginUseCase),
+        BlocProvider<AuthBloc>.value(
+          value: authBloc,
         ),
         BlocProvider(
           create: (context) {
-            // Obtain accessToken and clientId from AuthBloc after successful login
-            final authBloc = context.read<AuthBloc>();
-            final questionBloc =
-                QuestionBloc(questionService); // Pass the questionService here
-            questionBloc.add(
-              FetchQuestions(
-                accessTokens: (authBloc.state as AuthSuccess).accessToken,
-                clientId: (authBloc.state as AuthSuccess).clientId,
-              ),
-            );
+            final questionBloc = QuestionBloc(questionService);
+            // Access the AuthBloc state to initialize the QuestionBloc
+            final authState = authBloc.state;
+            if (authState is AuthSuccess) {
+              questionBloc.add(
+                FetchQuestions(
+                  accessTokens: authState.accessToken,
+                  clientId: authState.clientId,
+                ),
+              );
+            }
             return questionBloc;
           },
         ),

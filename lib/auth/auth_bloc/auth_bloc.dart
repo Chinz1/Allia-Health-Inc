@@ -52,3 +52,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
 }
+
+class AuthMiddleware extends BlocObserver {
+  final AuthBloc authBloc;
+
+  AuthMiddleware(this.authBloc);
+
+  @override
+  void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
+    super.onError(bloc, error, stackTrace);
+    if (error.toString().contains('401')) {
+      // Check if the AuthBloc is in AuthSuccess state to get the refresh token
+      final currentState = authBloc.state;
+      if (currentState is AuthSuccess) {
+        // Dispatch TokenExpired with the required refresh token
+        authBloc.add(TokenExpired(refreshToken: currentState.refreshToken));
+      }
+    }
+  }
+}
