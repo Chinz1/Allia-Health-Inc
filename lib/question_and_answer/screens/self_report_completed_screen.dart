@@ -16,14 +16,6 @@ class SelfReportCompletedScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // const Spacer(), // Pushes the content down
-            // Display the SVG image above the button
-            // SvgPicture.asset(
-            //   Assets.images.selfReportCompleted, // Reference to the SVG path from assets.gen.dart
-            //   width: 150.0, // Set the width for the SVG
-            //   height: 150.0, // Set the height for the SVG
-            // ),
-
             Image.asset(
               'assets/images/self_report_completed.png', // Path to your image
               width: 224,

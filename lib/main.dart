@@ -56,7 +56,7 @@ class MyApp extends StatelessWidget {
                 QuestionBloc(questionService); // Pass the questionService here
             questionBloc.add(
               FetchQuestions(
-                accessToken: (authBloc.state as AuthSuccess).accessToken,
+                accessTokens: (authBloc.state as AuthSuccess).accessToken,
                 clientId: (authBloc.state as AuthSuccess).clientId,
               ),
             );

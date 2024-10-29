@@ -196,7 +196,7 @@ class _SecondQuestionAndAnswerScreenState
                             if (_selectedOption != null) {
                               // Dispatch the event to submit the answer
                               bloc.add(SubmitSelfReport(
-                                accessToken: authState.accessToken,
+                                accessTokens: authState.accessToken,
                                 clientId: authState.clientId,
                                 questionId:
                                     secondQuestionId, // Ensure this is a String

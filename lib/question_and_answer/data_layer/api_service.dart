@@ -2,6 +2,7 @@ import 'dart:ffi';
 
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/option_model.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/questions_response.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -10,11 +11,13 @@ class QuestionService {
 
   // Fetch questions based on the access token and client ID provided after login
   Future<QuestionsResponse> getQuestions(
-      String accessToken, int clientId) async {
+      String accessTokens, int clientId) async {
+    final secureStorage = FlutterSecureStorage();
+    final accessToken = await secureStorage.read(key: "accessToken");
     final response = await http.get(
       Uri.parse('$_baseUrl/api/client/self-report/question'),
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer ${accessToken ?? accessTokens}',
         'Client-Id': '$clientId',
       },
     );
@@ -34,12 +37,14 @@ class QuestionService {
 
   // New method to submit the self-report answers
   Future<void> submitSelfReport(
-    String accessToken,
+    String accessTokens,
     int clientId,
     int selectedOptionIdFromFirstScreen,
     int questionIdFromFirstScreen,
     List<Option> selectedOptions,
   ) async {
+    final secureStorage = FlutterSecureStorage();
+    final accessToken = await secureStorage.read(key: "accessToken");
     // Create the initial answer with the first screen's selected option
     final Map<String, dynamic> firstScreenAnswer = {
       "questionId": questionIdFromFirstScreen, // From the first screen
@@ -71,7 +76,7 @@ class QuestionService {
     final response = await http.post(
       Uri.parse('$_baseUrl/api/client/self-report/answer'),
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer ${accessToken ?? accessTokens}',
         'Client-Id': '$clientId',
         'Content-Type': 'application/json',
       },
@@ -79,9 +84,6 @@ class QuestionService {
         "answers": answers, // Combine both sets of answers
       }),
     );
-    // print("iddd: ${_selectedOption?['id']}"); 
-    print("iddd: $answers"); 
-    
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final errorResponse = json.decode(response.body);

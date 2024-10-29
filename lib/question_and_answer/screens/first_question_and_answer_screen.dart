@@ -8,6 +8,7 @@ import 'package:allia_health_inc_test_app/question_and_answer/q_and_a_bloc/q_and
 import 'package:allia_health_inc_test_app/question_and_answer/screens/second_question_and_answer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
@@ -29,12 +30,14 @@ class _FirstQuestionAndAnswerScreenState
   bool get wantKeepAlive => false;
 
   @override
-  void didChangeDependencies() {
+  Future<void> didChangeDependencies() async {
     super.didChangeDependencies();
     final authBloc = context.read<AuthBloc>();
+     final secureStorage = FlutterSecureStorage();
+        final accessToken = await secureStorage.read(key: "accessToken");
     BlocProvider.of<QuestionBloc>(context).add(
       FetchQuestions(
-        accessToken: (authBloc.state as AuthSuccess).accessToken,
+        accessTokens: accessToken ?? (authBloc.state as AuthSuccess).accessToken,
         clientId: (authBloc.state as AuthSuccess).clientId,
       ),
     );
@@ -102,10 +105,10 @@ class _FirstQuestionAndAnswerScreenState
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(16.0),
-                                      boxShadow: [
+                                      boxShadow: const [
                                         BoxShadow(
                                           color: Colors.black26,
-                                          offset: const Offset(0, 4),
+                                          offset: Offset(0, 4),
                                           blurRadius: 10,
                                         ),
                                       ],

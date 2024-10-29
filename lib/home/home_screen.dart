@@ -71,33 +71,14 @@ class HomeScreen extends StatelessWidget {
                     InkWell(
                       onTap: () async {
                         // Retrieve the refresh token from secure storage
-                        String? refreshToken =
-                            await secureStorage.read(key: "accessToken");
 
-                        if (refreshToken != null) {
-                          // Trigger TokenExpired with the actual token
-                          authBloc
-                              .add(TokenExpired(refreshToken: refreshToken));
-                          authBloc.stream.listen((state) {
-                            if (state is AuthSuccess) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      FirstQuestionAndAnswerScreen(),
-                                ),
-                              );
-                            }
-                          });
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  FirstQuestionAndAnswerScreen(),
-                            ),
-                          );
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                FirstQuestionAndAnswerScreen(),
+                          ),
+                        );
                       },
                       child: Text(
                         'Take A Check-in',
