@@ -1,95 +1,200 @@
 import 'dart:ffi';
 
+import 'package:allia_health_inc_test_app/auth/services/get_it.dart';
+import 'package:allia_health_inc_test_app/auth/services/secure_storage_service.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/option_model.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/questions_response.dart';
+import 'package:allia_health_inc_test_app/question_and_answer/domain_layer/dio/dio_client.dart';
+import 'package:allia_health_inc_test_app/question_and_answer/domain_layer/dio/dio_error.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/questions_response.dart';
+import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/question_model.dart';
+import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/option_model.dart';
+
 class QuestionService {
+  final Dio dio;
+  final SecureStorageService secureStorageService;
   final String _baseUrl = 'https://api-dev.allia.health';
+  final NetworkProvider networkProvider = NetworkProvider();
+  bool _isRefreshing = false; // Flag to track if token is being refreshed
+  // final SecureStorageService secureStorageService = SecureStorageService();
 
-  // Fetch questions based on the access token and client ID provided after login
-  Future<QuestionsResponse> getQuestions(
-      String accessTokens, int clientId) async {
-    final secureStorage = FlutterSecureStorage();
-    final accessToken = await secureStorage.read(key: "accessToken");
-    final response = await http.get(
-      Uri.parse('$_baseUrl/api/client/self-report/question'),
-      headers: {
-        'Authorization': 'Bearer ${accessToken ?? accessTokens}',
-        'Client-Id': '$clientId',
-      },
-    );
+  QuestionService(this.dio, this.secureStorageService);
+  Future<String?> getRefreshToken() async {
+    final refreshToken = await secureStorageService.read(key: 'Refresh-Token');
+    return refreshToken;
+  }
 
-    // Handle successful response
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final jsonResponse = json.decode(response.body);
-      return QuestionsResponse.fromJson(jsonResponse);
-    } else {
-      // Handle errors and throw appropriate exception
-      final errorResponse = json.decode(response.body);
-      String errorMessage =
-          errorResponse['error'] ?? 'Failed to load questions';
-      throw (errorMessage);
+  // Future<String?> refreshAccessToken() async {
+
+  //   try {
+  //     final response = await dio.post(
+  //       '$_baseUrl/api/client/auth/refresh-token',
+  //       data: {'refreshToken': refreshToken},
+  //     );
+  //     if (response.statusCode == 200) {
+  //       final newToken = response.data['accessToken'];
+  //       await _saveAccessToken(newToken);
+  //       return newToken;
+  //     }
+  //   } catch (e) {
+  //     print('Failed to refresh access token: $e');
+  //     return null;
+  //   }
+  //   return null;
+  // }
+
+  Future<String?> refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    try {
+      final response = await networkProvider.call(
+        path: '/api/client/auth/refresh-token',
+        method: RequestMethod.post,
+        body: {'refreshToken': refreshToken},
+      );
+      if (response?.statusCode == 200) {
+        final newToken = response?.data['accessToken'];
+        await _saveAccessToken(newToken);
+        return newToken;
+      }
+    } on DioException catch (e) {
+      final errorMessage = Future.error(ApiError.fromDio(e));
+      return e.response?.data["message"] ?? errorMessage;
+    } catch (err) {
+      throw err.toString();
     }
   }
 
-  // New method to submit the self-report answers
+  // Future<String?> _getRefreshToken() async {
+  //   return await secureStorageService.read(key: 'refreshToken');
+  // }
+
+  Future<void> _saveAccessToken(String token) async {
+    await secureStorageService.write(key: 'Access-Token', value: token);
+  }
+
+  // Future<QuestionsResponse> getQuestions(
+  //     String accessTokens, int clientId) async {
+  //   try {
+  //     final response = await dio.get(
+  //       '$_baseUrl/api/client/self-report/question',
+  //       options: Options(
+  //         headers: {
+  //           'Client-Id': '$clientId',
+  //         },
+  //       ),
+  //     );
+  //     return QuestionsResponse.fromJson(response.data);
+  //   } on DioError catch (e) {
+  //     throw Exception(
+  //         e.response?.data['message'] ?? 'Failed to load questions');
+  //   }
+  // }
+
+  Future<QuestionsResponse> getQuestions(int clientId) async {
+    await secureStorageService.write(
+        key: 'Client-Id', value: clientId.toString());
+    try {
+      final response = await networkProvider.call(
+        path: '/api/client/self-report/question',
+        method: RequestMethod.get,
+      );
+      final responseData = QuestionsResponse.fromJson(response?.data);
+      return responseData;
+    } on DioException catch (e) {
+      final errorMessage = Future.error(ApiError.fromDio(e));
+      return e.response?.data["message"] ?? errorMessage;
+    } catch (err) {
+      throw err.toString();
+    }
+  }
+
+  // Future<void> submitSelfReport(
+  //   String accessTokens,
+  //   int clientId,
+  //   int selectedOptionIdFromFirstScreen,
+  //   int questionIdFromFirstScreen,
+  //   List<Option> selectedOptions,
+  // ) async {
+  //   final answers = [
+  //     {
+  //       "questionId": questionIdFromFirstScreen,
+  //       "selectedOptionId": selectedOptionIdFromFirstScreen,
+  //       "freeformValue": null,
+  //     },
+  //     ...selectedOptions
+  //         .map((option) => {
+  //               "questionId": option.questionId,
+  //               "selectedOptionId": option.id,
+  //               "freeformValue": null,
+  //             })
+  //         .toList(),
+  //   ];
+
+  //   try {
+  //     final response = await dio.post(
+  //       '$_baseUrl/api/client/self-report/answer',
+  //       data: {'answers': answers},
+  //       options: Options(
+  //         headers: {
+  //           'Client-Id': '$clientId',
+  //         },
+  //       ),
+  //     );
+
+  //     if (response.statusCode != 200 && response.statusCode != 201) {
+  //       throw Exception(
+  //           response.data['message'] ?? 'Failed to submit self-report');
+  //     }
+  //   } on DioError catch (e) {
+  //     throw Exception(
+  //         e.response?.data['message'] ?? 'Failed to submit self-report');
+  //   }
+  // }
+
   Future<void> submitSelfReport(
-    String accessTokens,
     int clientId,
     int selectedOptionIdFromFirstScreen,
     int questionIdFromFirstScreen,
     List<Option> selectedOptions,
   ) async {
-    final secureStorage = FlutterSecureStorage();
-    final accessToken = await secureStorage.read(key: "accessToken");
-    // Create the initial answer with the first screen's selected option
-    final Map<String, dynamic> firstScreenAnswer = {
-      "questionId": questionIdFromFirstScreen, // From the first screen
-      "selectedOptionId":
-          selectedOptionIdFromFirstScreen, // From the first screen
-      "freeformValue": null, // Hardcoded as per requirement
-    };
+    await secureStorageService.write(
+        key: 'Client-Id', value: clientId.toString());
 
-    // Map through selectedOptions for additional answers
-    final List<Map<String, dynamic>> additionalAnswers =
-        selectedOptions.map((option) {
-      if (option is Option) {
-        return {
-          "questionId": option.questionId, // Ensure questionId exists in Option
-          "selectedOptionId": option.id, // Ensure id exists and is not null
-          "freeformValue": null, // Hardcoded as per requirement
-        };
-      } else {
-        throw ('Invalid option type'); // Handle unexpected option type
-      }
-    }).toList();
-
-    // Combine the first screen answer with other answers
-    final List<Map<String, dynamic>> answers = [
-      firstScreenAnswer, // Include first screen answer
-      ...additionalAnswers, // Spread the additional answers
-    ];
-
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/client/self-report/answer'),
-      headers: {
-        'Authorization': 'Bearer ${accessToken ?? accessTokens}',
-        'Client-Id': '$clientId',
-        'Content-Type': 'application/json',
+    final answers = [
+      {
+        "questionId": questionIdFromFirstScreen,
+        "selectedOptionId": selectedOptionIdFromFirstScreen,
+        "freeformValue": null,
       },
-      body: json.encode({
-        "answers": answers, // Combine both sets of answers
-      }),
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      final errorResponse = json.decode(response.body);
-      String errorMessage =
-          errorResponse['error'] ?? 'Failed to submit self-report';
-      throw (errorMessage);
+      ...selectedOptions
+          .map((option) => {
+                "questionId": option.questionId,
+                "selectedOptionId": option.id,
+                "freeformValue": null,
+              })
+          .toList(),
+    ];
+    try {
+      final response = await networkProvider.call(
+        path: '/api/client/self-report/answer',
+        method: RequestMethod.post,
+        body: {'answers': answers},
+      );
+       if (response?.statusCode != 200 && response?.statusCode != 201) {
+        throw Exception(
+            response?.data['message'] ?? 'Failed to submit self-report');
+      }
+    } on DioException catch (e) {
+      final errorMessage = Future.error(ApiError.fromDio(e));
+      return e.response?.data["message"] ?? errorMessage;
+    } catch (err) {
+      throw err.toString();
     }
   }
 }

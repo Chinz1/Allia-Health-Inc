@@ -15,7 +15,7 @@ class FetchQuestions extends QuestionEvent {
 
 
 class SubmitSelfReport extends QuestionEvent {
-  final String accessTokens;
+  // final String accessTokens;
   final int clientId;
   final int selectedOptionIdFromFirstScreen;
   final int questionIdFromFirstScreen;
@@ -23,7 +23,7 @@ class SubmitSelfReport extends QuestionEvent {
   final List<int> selectedOptionId;
 
   SubmitSelfReport({
-    required this.accessTokens,
+    // required this.accessTokens,
     required this.clientId,
     required this.selectedOptionIdFromFirstScreen, 
     required this.questionIdFromFirstScreen, 

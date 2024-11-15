@@ -7,7 +7,7 @@ class GetQuestionsUseCase {
   GetQuestionsUseCase(this.repository);
 
   // Modify the use case to accept accessToken and clientId
-  Future<QuestionsResponse> call(String accessToken, int clientId) async {
-    return await repository.fetchQuestions(accessToken, clientId);
+  Future<QuestionsResponse> call(int clientId) async {
+    return await repository.fetchQuestions( clientId);
   }
 }

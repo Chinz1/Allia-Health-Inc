@@ -14,7 +14,7 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
       emit(QuestionLoading());
       try {
         final questionsResponse = await questionService.getQuestions(
-          event.accessTokens,
+          // event.accessTokens,
           event.clientId,
         );
 
@@ -42,7 +42,7 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
               .toList();
 
           await questionService.submitSelfReport(
-            event.accessTokens,
+            // event.accessTokens,
             event.clientId,
             event.selectedOptionIdFromFirstScreen,
             event.questionIdFromFirstScreen,

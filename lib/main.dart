@@ -4,29 +4,47 @@ import 'package:allia_health_inc_test_app/auth/auth_bloc/auth_state.dart';
 import 'package:allia_health_inc_test_app/auth/domain_layer/login_usecase.dart';
 import 'package:allia_health_inc_test_app/auth/repository/auth_repository.dart';
 import 'package:allia_health_inc_test_app/auth/screens/log_in_screen.dart';
+import 'package:allia_health_inc_test_app/auth/services/secure_storage_service.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/api_service.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/domain_layer/repository.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/domain_layer/usecase.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/q_and_a_bloc/q_and_a_bloc.dart';
 import 'package:allia_health_inc_test_app/question_and_answer/q_and_a_bloc/q_and_a_event.dart';
 import 'package:allia_health_inc_test_app/widget/dimensions.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+
+// Initialize GetIt service locator
+final GetIt serviceLocator = GetIt.instance;
+
+// Setting up dependencies
+void setupServiceLocator() {
+  serviceLocator.registerSingleton<SecureStorageService>(SecureStorageService());
+  serviceLocator.registerSingleton<Dio>(Dio());
+  serviceLocator.registerSingleton<QuestionService>(
+    QuestionService(
+      serviceLocator<Dio>(),
+      serviceLocator<SecureStorageService>(),
+    ),
+  );
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  setupServiceLocator();
 
-  // Set up dependencies
   final authRepository = AuthRepository();
   final loginUseCase = LoginUseCase(authRepository);
   final authBloc = AuthBloc(loginUseCase);
 
-  // Set up middleware observer
+  // Set Bloc observer for AuthMiddleware
   Bloc.observer = AuthMiddleware(authBloc);
 
-  // Setup the system UI overlay and orientation
+   // Setup the system UI overlay and orientation
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [
     SystemUiOverlay.top,
@@ -44,8 +62,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize the QuestionService and QuestionRepository
-    final questionService = QuestionService();
+    final questionService = serviceLocator<QuestionService>();
     final questionRepository = QuestionRepositoryImpl(questionService);
     final getQuestionsUseCase = GetQuestionsUseCase(questionRepository);
 
@@ -57,7 +74,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           create: (context) {
             final questionBloc = QuestionBloc(questionService);
-            // Access the AuthBloc state to initialize the QuestionBloc
+            // Check AuthBloc's state and initialize QuestionBloc if authenticated
             final authState = authBloc.state;
             if (authState is AuthSuccess) {
               questionBloc.add(
@@ -73,7 +90,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
-          // Initialize Dims.deviceSize with MediaQuery data
+          // Initialize Dims.deviceSize using MediaQuery data
           Dims.setSize(MediaQuery.of(context));
           return MaterialApp(
             debugShowCheckedModeBanner: false,

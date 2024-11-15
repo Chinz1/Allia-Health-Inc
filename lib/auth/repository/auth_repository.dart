@@ -1,5 +1,6 @@
 import 'package:allia_health_inc_test_app/auth/data_layer/login_request.dart';
 import 'package:allia_health_inc_test_app/auth/data_layer/login_response.dart';
+import 'package:allia_health_inc_test_app/auth/services/secure_storage_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -7,6 +8,7 @@ class AuthRepository {
   final String _baseUrl = 'https://api-dev.allia.health';
 
   Future<LoginResponse> login(LoginRequest request) async {
+    final SecureStorageService secureStorageService = SecureStorageService();
     final response = await http.post(
       Uri.parse('$_baseUrl/api/client/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -20,13 +22,16 @@ class AuthRepository {
       // Check if response contains the expected structure
       if (responseBody.containsKey('body') &&
           responseBody['body'].containsKey('accessToken')) {
+            final loginResponse = LoginResponse.fromJson(responseBody);
+            await secureStorageService.write(key: 'Access-Token', value: loginResponse.accessToken);
+            await secureStorageService.write(key: 'Refresh-Token', value: loginResponse.refreshToken);
         return LoginResponse.fromJson(responseBody);
       } else {
         throw ('Invalid response format');
       }
     } else {
       final errorResponse = json.decode(response.body);
-      String errorMessage = errorResponse['error'] ?? 'Failed to log in';
+      String errorMessage = errorResponse['message'] ?? 'Failed to log in';
       throw Exception(errorMessage);
     }
   }
@@ -44,7 +49,7 @@ class AuthRepository {
       return LoginResponse.fromJson(responseBody);
     } else {
       final errorResponse = json.decode(response.body);
-      throw Exception('Failed to refresh token: ${errorResponse['error']}');
+      throw Exception('Failed to refresh token: ${errorResponse['message']}');
     }
   }
 }

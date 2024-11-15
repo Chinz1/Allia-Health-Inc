@@ -2,7 +2,7 @@ import 'package:allia_health_inc_test_app/question_and_answer/data_layer/api_ser
 import 'package:allia_health_inc_test_app/question_and_answer/data_layer/models/questions_response.dart';
 
 abstract class QuestionRepository {
-  Future<QuestionsResponse> fetchQuestions(String accessToken, int clientId);
+  Future<QuestionsResponse> fetchQuestions(int clientId);
 }
 
 class QuestionRepositoryImpl implements QuestionRepository {
@@ -11,8 +11,8 @@ class QuestionRepositoryImpl implements QuestionRepository {
   QuestionRepositoryImpl(this.service);
 
   @override
-  Future<QuestionsResponse> fetchQuestions(String accessToken, int clientId) {
+  Future<QuestionsResponse> fetchQuestions(int clientId) {
     // Pass the access token and client id
-    return service.getQuestions(accessToken, clientId);
+    return service.getQuestions(clientId);
   }
 }
